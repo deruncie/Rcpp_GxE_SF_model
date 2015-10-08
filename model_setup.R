@@ -1,16 +1,16 @@
-model_path = '~/Documents/Statistics/Sparse_factor_G_matrix/R_version'
+model_path = '~/Documents/Git_repositories/Rcpp_GxE_SF_model'
 source(paste(model_path,'fast_BSFG_sampler_init.R',sep='/'))
-source(paste(model_path,'fast_BSFG_sampler.R',sep='/'))
+source(paste(model_path,'new_BSFG_sampler.R',sep='/'))
 source(paste(model_path,'BSFG_functions.R',sep='/'))
 source(paste(model_path,'plotting_diagnostics.R',sep='/'))
 
 library(Rcpp)
 library(RcppArmadillo)
 
-sourceCpp(paste(model_path,'BSFG_functions_c.cpp',sep='/'))
+sourceCpp(paste(model_path,'new_BSFG_functions_c.cpp',sep='/'))
 
 
-setwd('/Users/der7/Documents/Statistics/Sparse_factor_G_matrix/Submission2/Analyses/Website/BSF-G_new/Runcie_Mukherjee_analyses/Simulations/Sim_2')
+setwd('Sim_1')
 
 seed = 1234
 set.seed(seed)
@@ -75,6 +75,8 @@ BSFG_state = clear_Posterior(BSFG_state)
 n_samples = 200;
 for(i  in 1:10) {
     print(sprintf('Run %d',i))
-    BSFG_state = fast_BSFG_sampler(BSFG_state,n_samples)
+sourceCpp(paste(model_path,'new_BSFG_functions_c.cpp',sep='/'))
+source(paste(model_path,'new_BSFG_sampler.R',sep='/'))
+    BSFG_state = new_BSFG_sampler(BSFG_state,n_samples)
     print(i)
 }

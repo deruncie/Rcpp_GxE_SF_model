@@ -408,12 +408,12 @@ save_posterior_samples = function( sp_num,Posterior,Lambda,F,F_b,F_a,B,W,E_a,del
 
 	Posterior$resid_Y_prec[,sp_num] = resid_Y_prec
 	Posterior$E_a_prec[,sp_num]     = E_a_prec
-	Posterior$W_prec[,sp_num]       = W_prec
+	try({Posterior$W_prec[,sp_num]       = W_prec},silent=T)
 
 	# save B,U,W
 	Posterior$B   = (Posterior$B*(sp_num-1) + B)/sp_num
 	Posterior$E_a = (Posterior$E_a*(sp_num-1) + E_a)/sp_num
-	Posterior$W   = (Posterior$W*(sp_num-1) + W)/sp_num
+	try({Posterior$W   = (Posterior$W*(sp_num-1) + W)/sp_num},silent=T)
 
 	return(Posterior)
 }
