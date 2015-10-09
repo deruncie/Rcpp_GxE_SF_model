@@ -43,12 +43,12 @@ mat sample_coefs_c(
 
 	for(int j=0; j < p; j++){
 		mat WtQDi = sweep_times(QtW.t(),2,QtY_prec.col(j));
-		mat Sigma = WtQDi * QtW + diagmat(prior_prec.col(j));
-		vec m_rot = WtQDi * QtY.col(j);
+		mat Phi = WtQDi * QtW + diagmat(prior_prec.col(j));
+		vec m_rot = WtQDi * QtY.col(j) + diagmat(prior_prec.col(j)) * prior_mean.col(j);
 
-		mat L_Sigma = chol(Sigma);
-		vec mean = solve(L_Sigma,solve(L_Sigma.t(),m_rot));
-		vec e = solve(L_Sigma,z.col(j));
+		mat L_Phi = chol(Phi);
+		vec mean = solve(L_Phi,solve(L_Phi.t(),m_rot));
+		vec e = solve(L_Phi,z.col(j));
 
 		result.col(j) = mean + e;
 	}
