@@ -129,6 +129,7 @@ sample_h2s_discrete = function(F,h2_divisions,h2_priors,invert_aI_bZAZ){
 
 	for(i in 1:h2_divisions){
 		h2 = (i-1)/(h2_divisions)
+		recover()
 		if(h2 > 0) {
 			std_scores = 1/sqrt(h2) * sweep(std_scores_b,2,sqrt(s+(1-h2)/h2),'/')
 			det = sum(log((s+(1-h2)/h2)*h2)/2)

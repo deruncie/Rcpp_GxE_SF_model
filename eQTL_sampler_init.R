@@ -1,5 +1,5 @@
 library(R.matlab)
-GxE_sampler_init = function(priors,run_parameters){
+eQTL_sampler_init = function(priors,run_parameters){
     # require(PEIP)
     # require(Matrix)
 
@@ -37,13 +37,16 @@ GxE_sampler_init = function(priors,run_parameters){
 
     Y            = sim_data$Y
     X            = sim_data$X
+    Xf           = sim_data$X
     Z_1          = sim_data$Z1
+    Z_2f         = sweep(Z_1,1,Xf,'*')
     cisGenotypes = sim_data$cisGenotypes
     A            = sim_data$A1
 
     n = nrow(Y)
     p = ncol(Y)
     r = ncol(Z_1)
+    r2f = ncol(Z_2f)
 
     sim_data$gen_factor_Lambda = sim_data$Lambda
     sim_data$error_factor_Lambda = sim_data$Lambda
@@ -98,12 +101,17 @@ GxE_sampler_init = function(priors,run_parameters){
     stopifnot(nrow(Z_2) == n)
     r2 = ncol(Z_2)
 
+    bf = ncol(Xf)
+    r2f = ncol(Z_2f)
 
     data_matrices = list(
-            Y_full    = Y_full,
-            Z_1       = Z_1,
-            Z_2       = Z_2,
-            X         = X
+            Y_full       = Y_full,
+            Z_1          = Z_1,
+            Z_2          = Z_2,
+            X            = X,
+            Z_2f         = Z_2f,
+            Xf           = Xf,
+            cisGenotypes = cisGenotypes
             )
     
 # ----------------------------- #
@@ -175,7 +183,7 @@ GxE_sampler_init = function(priors,run_parameters){
     #  Prior: Normal distribution for each element
     #       mean = 0
     #       sd = sqrt(F_h2') for each row.
-    B_F = matrix(rnorm(b*k,0,1),b,k, byrow = T)
+    B_F = matrix(rnorm(bf*k,0,1),bf,k, byrow = T)
     
     # Genetic effects on the factor scores.
     #  Prior: Normal distribution for each element
@@ -185,6 +193,7 @@ GxE_sampler_init = function(priors,run_parameters){
 
     prec_F_resid = rgamma(k,shape = priors$prec_F_resid_shape,rate = priors$prec_F_resid_rate)
     prec_B_F = rgamma(k,shape = priors$prec_B_F_shape,rate = priors$prec_B_F_rate)
+    prec_E_a2_F = rgamma(k,shape = priors$prec_E_a2_F_shape,rate = priors$prec_E_a2_F_rate)
     
     # Full Factor scores. Combination of genetic and residual variation on
     # each factor.
@@ -209,12 +218,14 @@ GxE_sampler_init = function(priors,run_parameters){
     #       mean = 0
     #       sd = 1./sqrt(E_a_prec)' on each row
     E_a2 = matrix(rnorm(p*r2,0,sqrt(1/E_a2_prec)),nr = r2, nc = p, byrow = T)
+    E_a2_F = matrix(rnorm(k*r2f,0,sqrt(1/prec_E_a2_F)),nr = r2f, nc = k, byrow = T)
 
     # Fixed effect coefficients.
     #  Prior: Normal distribution for each element
     #       mean = 0
     #       sd = sqrt(1/fixed_effects_prec)
     B_resid = matrix(rnorm(b*p),nr = b, nc = p)
+    cis_effects = matrix(rnorm(p),nr = 1, nc = p)
     mu = rnorm(p)
 
     B_prec = matrix(rgamma(b*p,3,3),b,p)
@@ -228,13 +239,16 @@ GxE_sampler_init = function(priors,run_parameters){
             Lambda       = matrix(0,nr=0,nc=0),
             F            = matrix(0,nr=0,nc=0),
             B_F          = matrix(0,nr=0,nc=0),
+            E_a2_F       = matrix(0,nr=0,nc=0),
             F_a          = matrix(0,nr=0,nc=0),
             mu           = matrix(0,nr=p,nc=0),
             B_resid      = matrix(0,nr=b*p,nc=0),
+            cis_effects  = matrix(0,nr=p,nc=0),
             delta        = matrix(0,nr=0,nc=0),
             B_shape      = matrix(0,nr=1,nc=0),
             F_h2         = matrix(0,nr=0,nc=0),
             prec_B_F     = matrix(0,nr=0,nc=0),
+            prec_E_a2_F  = matrix(0,nr=0,nc=0),
             prec_F_resid = matrix(0,nr=0,nc=0),
             resid_Y_prec = matrix(0,nr=p,nc=0),
             resid_h2     = matrix(0,nr=p,nc=0),
@@ -256,7 +270,9 @@ GxE_sampler_init = function(priors,run_parameters){
                             delta        = delta,
                             tauh         = tauh,
                             B_shape      = B_shape,
+                            cis_effects  = cis_effects,
                             prec_B_F     = prec_B_F,
+                            prec_E_a2_F  = prec_E_a2_F,
                             prec_F_resid = prec_F_resid,
                             F_h2         = F_h2,
                             Lambda       = Lambda,
@@ -265,6 +281,7 @@ GxE_sampler_init = function(priors,run_parameters){
                             B_resid      = B_resid,
                             E_a2         = E_a2,
                             B_F          = B_F,
+                            E_a2_F       = E_a2_F,
                             F_a          = F_a,
                             E_a          = E_a,
                             nrun         = 0
@@ -310,6 +327,8 @@ GxE_sampler_init = function(priors,run_parameters){
             r              = r,
             r2             = r2,
             b              = b,
+            r2f            = r2f,
+            bf             = bf,
             Mean_Y         = Mean_Y,
             VY             = VY,
             Ainv           = Ainv,

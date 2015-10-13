@@ -1,8 +1,8 @@
 model_path = '~/Documents/Git_repositories/Rcpp_GxE_SF_model'
-source(paste(model_path,'GxE_sampler_init.R',sep='/'))
-source(paste(model_path,'GxE_sampler.R',sep='/'))
-source(paste(model_path,'GxE_functions.R',sep='/'))
-source(paste(model_path,'plotting_diagnostics_GxE.R',sep='/'))
+source(paste(model_path,'eQTL_sampler_init.R',sep='/'))
+source(paste(model_path,'eQTL_sampler.R',sep='/'))
+source(paste(model_path,'eQTL_functions.R',sep='/'))
+source(paste(model_path,'plotting_diagnostics_eQTL.R',sep='/'))
 
 library(Rcpp)
 library(RcppArmadillo)
@@ -62,16 +62,9 @@ print('Initializing')
 save(priors,file = 'Priors.RData')
 # Initialize Chain, prep runs
 source(paste(model_path,'GxE_sampler_init.R',sep='/'))
-GxE_state = GxE_sampler_init(priors,run_parameters)
+eQTL_state = eQTL_sampler_init(priors,run_parameters)
 
-GxE_state = clear_Posterior(GxE_state)
-
-Z_1 = GxE_state$data$Z_1
-a = matrix(rnorm(ncol(Z_1)*100),nc=100)
-Y = Z_1 %*% a + matrix(rnorm(nrow(Z_1)*100,0,sqrt(1/30)),nc=100)
-a_est = with(GxE_state$run_variables$sample_a_mats,sample_a(Y,QtLiZt,1/rep(2,100),rep(1/(31/30),100),d,LitQ))
-plot(c(a_est),c(a));abline(0,1)
-image(cor(a,a_est)^2,zlim=c(0,1))
+eQTL_state = clear_Posterior(eQTL_state)
 
 # # optional: To load from end of previous run, run above code, then run these lines:
 # load('current_state')
@@ -84,9 +77,9 @@ image(cor(a,a_est)^2,zlim=c(0,1))
 n_samples = 200;
 for(i  in 1:100) {
     print(sprintf('Run %d',i))
-source(paste(model_path,'plotting_diagnostics_GxE.R',sep='/'))
+source(paste(model_path,'plotting_diagnostics_eQTL.R',sep='/'))
 sourceCpp(paste(model_path,'new_BSFG_functions_c.cpp',sep='/'))
-source(paste(model_path,'GxE_sampler.R',sep='/'))
-    GxE_state = GxE_sampler(GxE_state,n_samples)
+source(paste(model_path,'eQTL_sampler.R',sep='/'))
+    eQTL_state = eQTL_sampler(eQTL_state,n_samples)
     print(i)
 }

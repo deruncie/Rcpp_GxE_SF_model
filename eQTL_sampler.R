@@ -1,4 +1,4 @@
-GxE_sampler = function(GxE_state,n_samples) {
+eQTL_sampler = function(eQTL_state,n_samples) {
 	# -- Daniel Runcie -- #
 	#
 	# Gibbs sampler for genetic covariance estimation based on mixed effects
@@ -55,29 +55,34 @@ GxE_sampler = function(GxE_state,n_samples) {
 	# may not ever sample E_a for F_a
 
 
-	data_matrices  = GxE_state$data_matrices
-	params         = GxE_state$params
-	priors         = GxE_state$priors
-	Posterior      = GxE_state$Posterior
-	current_state  = GxE_state$current_state
-	run_parameters = GxE_state$run_parameters
-	run_variables  = GxE_state$run_variables
+	data_matrices  = eQTL_state$data_matrices
+	params         = eQTL_state$params
+	priors         = eQTL_state$priors
+	Posterior      = eQTL_state$Posterior
+	current_state  = eQTL_state$current_state
+	run_parameters = eQTL_state$run_parameters
+	run_variables  = eQTL_state$run_variables
 
 
 	# ----------------------------------------------- #
 	# ----------------Load data matrices------------- #
 	# ----------------------------------------------- #
 
-	Y_full  = data_matrices$Y_full
-	Z_1     = data_matrices$Z_1
-	Z_2     = data_matrices$Z_2
-	X       = data_matrices$X 			# Note: Do not include global mean in X. Just treatment contrasts
+	Y_full       = data_matrices$Y_full
+	Z_1          = data_matrices$Z_1
+	Z_2          = data_matrices$Z_2
+	X            = data_matrices$X 			# Note: Do not include global mean in X. Just treatment contrasts
+	Z_2f         = data_matrices$Z_2f
+	Xf           = data_matrices$Xf 			# Note: Do not include global mean in X. Just treatment contrasts
+	cisGenotypes = data_matrices$cisGenotypes 			# Note: Do not include global mean in X. Just treatment contrasts
 
 	p   = ncol(Y_full)
 	n   = nrow(Y_full)
 	r   = ncol(Z_1)
 	r2  = ncol(Z_2)
 	b   = ncol(X)
+	r2f = ncol(Z_2f)
+	bf  = ncol(Xf)
 
 
 	# ----------------------------------------------- #
@@ -88,6 +93,8 @@ GxE_sampler = function(GxE_state,n_samples) {
 	resid_Y_prec_rate  = priors$resid_Y_prec_rate
 	prec_B_F_shape     = priors$prec_B_F_shape
 	prec_B_F_rate      = priors$prec_B_F_rate
+	prec_E_a2_F_shape  = priors$prec_E_a2_F_shape
+	prec_E_a2_F_rate   = priors$prec_E_a2_F_rate
 	prec_F_resid_shape = priors$prec_F_resid_shape
 	prec_F_resid_rate  = priors$prec_F_resid_rate
 	E_a2_prec_shape    = priors$E_a2_prec_shape
@@ -116,15 +123,18 @@ GxE_sampler = function(GxE_state,n_samples) {
 	delta        = current_state$delta       
 	tauh         = current_state$tauh       
 	B_shape      = current_state$B_shape        
-	prec_B_F     = current_state$prec_B_F    
+	prec_B_F     = current_state$prec_B_F       
+	prec_E_a2_F  = current_state$prec_E_a2_F    
 	prec_F_resid = current_state$prec_F_resid
 	F_h2         = current_state$F_h2        
 	Lambda       = current_state$Lambda      
 	F            = current_state$F           
 	mu           = current_state$mu          
-	B_resid      = current_state$B_resid           
+	B_resid      = current_state$B_resid     
+	cis_effects  = current_state$cis_effects           
 	E_a2         = current_state$E_a2        
 	B_F          = current_state$B_F         
+	E_a2_F       = current_state$E_a2_F         
 	F_a          = current_state$F_a         
 	E_a          = current_state$E_a   
 	start_i      = current_state$nrun      
@@ -134,8 +144,8 @@ GxE_sampler = function(GxE_state,n_samples) {
 	# ----------------------------------------------- #
 	# -----------Reset Global Random Number Stream--- #
 	# ----------------------------------------------- #
-	do.call("RNGkind",as.list(GxE_state$RNG$RNGkind))  ## must be first!
-	assign(".Random.seed", GxE_state$RNG$Random.seed, .GlobalEnv)
+	do.call("RNGkind",as.list(eQTL_state$RNG$RNGkind))  ## must be first!
+	assign(".Random.seed", eQTL_state$RNG$Random.seed, .GlobalEnv)
 
 	# ----------------------------------------------- #
 	# -----------Load pre-calcualted matrices-------- #
@@ -144,13 +154,14 @@ GxE_sampler = function(GxE_state,n_samples) {
 	A_2_inv                          = run_variables$A_2_inv
 	invert_aI_bZAZ                   = run_variables$invert_aI_bZAZ
 	sample_a_mats 					 = run_variables$sample_a_mats
-	Q = invert_aI_bZAZ$U
-	d = invert_aI_bZAZ$s
-	Qt = t(Q)
-	QtX = Qt %*% X
-	QtXZ2 = Qt %*% cbind(1,X,Z_2)
-	Y = Y_full
-	QtY = Qt %*% Y
+	Q              = invert_aI_bZAZ$U
+	d              = invert_aI_bZAZ$s
+	Qt             = t(Q)
+	QtcisGenotypes = Qt %*% cisGenotypes
+	QtJXZ2         = Qt %*% cbind(1,X,Z_2)
+	QtXfZ2f        = Qt %*% cbind(Xf,Z_2f)
+	Y              = Y_full
+	QtY            = Qt %*% Y
 
 	# ----------------------------------------------- #
 	# ----------------Set up run--------------------- #
@@ -179,13 +190,16 @@ GxE_sampler = function(GxE_state,n_samples) {
 		Posterior$Lambda       = cbind(Posterior$Lambda,matrix(0,nr = nrow(Posterior$Lambda),nc = sp))
 		Posterior$F            = cbind(Posterior$F,matrix(0,nr = nrow(Posterior$F),nc = sp))
 		Posterior$B_F          = cbind(Posterior$B_F,matrix(0,nr = nrow(Posterior$B_F),nc = sp))
+		Posterior$E_a2_F       = cbind(Posterior$E_a2_F,matrix(0,nr = nrow(Posterior$E_a2_F),nc = sp))
 		Posterior$F_a          = cbind(Posterior$F_a,matrix(0,nr = nrow(Posterior$F_a),nc = sp))
 		Posterior$mu           = cbind(Posterior$mu,matrix(0,nr = nrow(Posterior$mu),nc = sp))
 		Posterior$B_resid      = cbind(Posterior$B_resid,matrix(0,nr = nrow(Posterior$B_resid),nc = sp))
+		Posterior$cis_effects  = cbind(Posterior$cis_effects,matrix(0,nr = nrow(Posterior$cis_effects),nc = sp))
 		Posterior$delta        = cbind(Posterior$delta,matrix(0,nr = nrow(Posterior$delta),nc = sp))
 		Posterior$B_shape      = c(Posterior$B_shape,rep(0,nc = sp))		
 		Posterior$F_h2         = cbind(Posterior$F_h2,matrix(0,nr = nrow(Posterior$F_h2),nc = sp))
 		Posterior$prec_B_F     = cbind(Posterior$prec_B_F,matrix(0,nr = nrow(Posterior$prec_B_F),nc = sp))
+		Posterior$prec_E_a2_F  = cbind(Posterior$prec_E_a2_F,matrix(0,nr = nrow(Posterior$prec_E_a2_F),nc = sp))
 		Posterior$prec_F_resid = cbind(Posterior$prec_F_resid,matrix(0,nr = nrow(Posterior$prec_F_resid),nc = sp))
 		Posterior$resid_Y_prec = cbind(Posterior$resid_Y_prec,matrix(0,nr = nrow(Posterior$resid_Y_prec),nc = sp))
 		Posterior$resid_h2     = cbind(Posterior$resid_h2,matrix(0,nr = nrow(Posterior$resid_h2),nc = sp))
@@ -212,39 +226,41 @@ GxE_sampler = function(GxE_state,n_samples) {
 		# }
 		# recover()
 		  
-	 # -----Sample B, Lambda, E_a2 ------------------ #
+	 # -----Sample cis_effects, mu, B, Lambda, E_a2 ------------------ #
 		# recover()
 		QtW = Qt %*% cbind(1,X,F,Z_2)
 		QtY_prec = t(resid_Y_prec/(matrix(resid_h2,nc=1) %*% matrix(d,nr=1) + (1-c(resid_h2))))
-		# prior_prec = matrix(rbind(0,B_prec,t(Plam), matrix(E_a2_prec,nr=r2,nc=p)),nr = 1+b+k+r2, ncol = p)
-		prior_prec = rbind(0,B_prec,t(Plam), matrix(E_a2_prec,nr=r2,nc=p))
-		prior_mean = matrix(0,nr = 1+b+k+r2, ncol = p)
-		result_mat = sample_coefs_c(QtY, QtW, QtY_prec, prior_mean,prior_prec)
-		mu_row = 1
+		prior_prec = rbind(1e-6,0,B_prec,t(Plam), matrix(E_a2_prec,nr=r2,nc=p))
+		prior_mean = matrix(0,nr = 2+b+k+r2, ncol = p)
+		result_mat = sample_coefs_cis_effects_c(QtY, QtcisGenotypes,QtW, QtY_prec, prior_mean,prior_prec)
+		cis_effects_row = 1
+		mu_row = 2
 		b_rows = c()
 		lambda_rows = c()
 		e_a2_rows = c()
-		if(b > 0) b_rows     = 1+c(1:b)
-		lambda_rows          = max(c(1,b_rows)) + 1:k
+		if(b > 0) b_rows     = 2+c(1:b)
+		lambda_rows          = max(c(2,b_rows)) + 1:k
 		if(r2 > 0) e_a2_rows = max(lambda_rows) + 1:r2
-		mu = result_mat[1,]
+		cis_effects = result_mat[cis_effects_row,]
+		mu = result_mat[mu_row,]
 		B_resid = matrix(result_mat[b_rows,],nr=b)
 		Lambda = t(result_mat[lambda_rows,])
 		E_a2 = result_mat[e_a2_rows,]
 
+		Qt_location_mean = sweep(QtcisGenotypes,2,cis_effects,'*') + QtJXZ2 %*% rbind(mu,B_resid,E_a2)
+
 	
 	 # -----Sample F, conditioning on Lambda, B, E_a2 ------------------ #
-		QtY_resid_t = t(QtY - QtXZ2 %*% rbind(mu,B_resid,E_a2))
+		QtY_resid_t = t(QtY - Qt_location_mean)
 		QtY_prec_t = t(QtY_prec)
 		prior_prec = prec_F_resid/(matrix(F_h2,nc = 1) %*% matrix(d,nr = 1) + (1-c(F_h2)))
-		# prior_prec = 1/(matrix(F_h2,nc = 1) %*% matrix(d,nr = 1) + (1-c(F_h2)))
-		prior_mean = t(QtX %*% B_F)
+		prior_mean = t(QtXfZ2f %*% rbind(B_F,E_a2_F))
 		FtQ = sample_coefs_c(QtY_resid_t, Lambda, QtY_prec_t,prior_mean, prior_prec)
 		QtF = t(FtQ)
 		F = Q %*% QtF
 		
 	 # -----Sample resid_h2 conditioning on B,Lambda,F,E_a2, resid_Y_prec -------------------- #
-		QtY_resid = QtY - QtXZ2 %*% rbind(mu,B_resid,E_a2) - t(FtQ) %*% t(Lambda)
+		QtY_resid = QtY - Qt_location_mean - t(FtQ) %*% t(Lambda)
 		resid_h2 = sample_h2s_discrete_c_new(QtY_resid,resid_Y_prec,h2_divisions,h2_priors_resids,d)
 		E_a_prec = (1-resid_h2)/resid_h2 * resid_Y_prec
 
@@ -258,23 +274,37 @@ GxE_sampler = function(GxE_state,n_samples) {
 	 # -----Sample B_F ------------ #
 		# recover()
 		QtF_prec = t(prec_F_resid/(matrix(F_h2,nc=1) %*% matrix(d,nr=1) + (1-c(F_h2))))
-		# QtF_prec = t(1/(matrix(F_h2,nc=1) %*% matrix(d,nr=1) + (1-c(F_h2))))
-		# prior_prec = matrix(0,b,k,byrow=T)
-		prior_prec = matrix(prec_B_F,b,k,byrow=T)
-		prior_mean = matrix(0,b,k)
-		B_F = sample_coefs_c(QtF, QtX, QtF_prec,prior_mean, prior_prec)
+		prior_prec = rbind(matrix(prec_B_F,bf,k,byrow=T),matrix(prec_E_a2_F,r2f,k,byrow=T))
+		prior_mean = matrix(0,nrow(prior_prec),k)
+		result_mat = sample_coefs_c(QtF, QtXfZ2f, QtF_prec,prior_mean, prior_prec)
+		b_rows = c()
+		e_a2_rows = c()
+		if(b > 0) b_rows     = c(1:bf)
+		if(r2f > 0) e_a2_rows = max(c(0,b_rows)) + 1:r2f
+		B_F = matrix(result_mat[b_rows,],nr=b)
+		E_a2_F = result_mat[e_a2_rows,]
 
 	 # -----Sample prec_B_F ------------ #
 		# want a truncated gamma
-		shape = prec_B_F_shape + (b)/2
+		shape = prec_B_F_shape + (bf)/2
 		rate  = prec_B_F_rate + colSums(B_F^2)/2
 		gam_unif = runif(k,pgamma(1,shape=shape,rate=rate),1)
 		prec_B_F = qgamma(gam_unif,shape=shape,rate=rate)
 		prec_B_F[gam_unif==1] = 1
 
+	 # -----Sample prec_E_a2_F ------------ #
+		# want a truncated gamma
+		if(r2f > 0){
+			shape = prec_E_a2_F_shape + (r2f)/2
+			rate  = prec_E_a2_F_rate + colSums(E_a2_F^2)/2
+			gam_unif = runif(k,pgamma(1,shape=shape,rate=rate),1)
+			prec_E_a2_F = qgamma(gam_unif,shape=shape,rate=rate)
+			prec_E_a2_F[gam_unif==1] = 1
+		}
+
 	 # -----Sample prec_F_resid ------------ #
 		# want a truncated gamma
-		QtF_resid = QtF - QtX %*% B_F
+		QtF_resid = QtF - QtXfZ2f %*% rbind(B_F,E_a2_F)
 		QtF_prec = t(1/(matrix(F_h2,nc=1) %*% matrix(d,nr=1) + (1-c(F_h2))))
 		shape = prec_F_resid_shape + (n)/2
 		rate  = prec_F_resid_rate+1/2*colSums(QtF_resid^2*QtF_prec)
@@ -287,11 +317,10 @@ GxE_sampler = function(GxE_state,n_samples) {
 
 	 # -----Sample F_h2 conditioning on F and B_F-------------------- #
 		#conditioning on F, marginalizing over F_a
-		# F_h2 = sample_h2s_discrete(F - X_f %*% B_F,h2_divisions,h2_priors_factors,invert_aI_bZAZ)
-		# F_h2 = sample_h2s_discrete_c(F - X %*% B_F,h2_divisions,h2_priors_factors,invert_aI_bZAZ)
-		F_h2 = sample_h2s_discrete_c_new(t(FtQ) - QtX %*% B_F,prec_F_resid,h2_divisions,h2_priors_factors,d)
-
+		F_h2 = sample_h2s_discrete_c_new(QtF_resid,prec_F_resid,h2_divisions,h2_priors_factors,d)
+		
 	 # # -----Sample F_a ------------ #
+		# just for the posterior, doesn't contribute to the sampler
 		F_a = sample_a(F, sample_a_mats$QtLiZt,prec_F_resid,F_h2,sample_a_mats$d,sample_a_mats$LitQ)
 		
  	# -----Sample Lambda_prec------------- #
@@ -299,6 +328,8 @@ GxE_sampler = function(GxE_state,n_samples) {
 		Lambda_prec = matrix(rgamma(p*k,shape = (Lambda_df + 1)/2,rate = (Lambda_df + sweep(Lambda2,2,tauh,'*'))/2),nr = p,nc = k)
 
  	# -----Sample B_prec------------- #
+		# only precision, no sparsity right now
+	# turned off B_resid (high uniform precision)
 		# shape = B_shape_shape + length(B_resid)/2
 		# rate = B_shape_rate + sum(B_prec * B_resid^2)/2
 		# B_shape = rgamma(1,shape=shape,rate=rate)
@@ -329,9 +360,11 @@ GxE_sampler = function(GxE_state,n_samples) {
 								Plam          = Plam,
 								Lambda        = Lambda,
 								prec_B_F      = prec_B_F,
+								prec_E_a2_F   = prec_E_a2_F,
 								prec_F_resid  = prec_F_resid,
 								F_h2          = F_h2,
 								B_F           = B_F,
+								E_a2_F        = E_a2_F,
 								F_a           = F_a,
 								F             = F,
 								Z_1           = Z_1,
@@ -344,17 +377,19 @@ GxE_sampler = function(GxE_state,n_samples) {
 								epsilon       = epsilon,
 								prop          = prop 
 								)
-		Lambda_prec   = adapt_result$Lambda_prec
-		delta         = adapt_result$delta
-		tauh          = adapt_result$tauh
-		Plam          = adapt_result$Plam
-		Lambda        = adapt_result$Lambda
-		prec_B_F      = adapt_result$prec_B_F
-		prec_F_resid  = adapt_result$prec_F_resid
-		F_h2          = adapt_result$F_h2
-		B_F           = adapt_result$B_F
-		F_a           = adapt_result$F_a
-		F             = adapt_result$F
+		Lambda_prec  = adapt_result$Lambda_prec
+		delta        = adapt_result$delta
+		tauh         = adapt_result$tauh
+		Plam         = adapt_result$Plam
+		Lambda       = adapt_result$Lambda
+		prec_B_F     = adapt_result$prec_B_F
+		prec_E_a2_F  = adapt_result$prec_E_a2_F
+		prec_F_resid = adapt_result$prec_F_resid
+		F_h2         = adapt_result$F_h2
+		B_F          = adapt_result$B_F
+		E_a2_F       = adapt_result$E_a2_F
+		F_a          = adapt_result$F_a
+		F            = adapt_result$F
 		k = ncol(F)
 
 	 # -- save sampled values (after thinning) -- #
@@ -368,15 +403,18 @@ GxE_sampler = function(GxE_state,n_samples) {
 												Lambda       = Lambda,
 												F            = F,
 												B_F          = B_F,
+												E_a2_F       = E_a2_F,
 												F_a          = F_a,
 												mu           = mu,
 												B_resid      = B_resid,
+												cis_effects  = cis_effects,
 												E_a2         = E_a2,
 												E_a          = E_a,
 												delta        = delta,
 												B_shape      = B_shape,
 												F_h2         = F_h2,
 												prec_B_F     = prec_B_F,
+												prec_E_a2_F  = prec_E_a2_F,
 												prec_F_resid = prec_F_resid,
 												resid_Y_prec = resid_Y_prec,
 												resid_h2     = resid_h2,
@@ -410,21 +448,24 @@ GxE_sampler = function(GxE_state,n_samples) {
 			   h2                   = run_parameters$h2
 			   # draw_simulation_diagnostics(sp_num,run_parameters,run_variables,Posterior,Lambda,F_h2,E_a_prec,resid_Y_prec)
 			   draw_simulation_diagnostics_new(
-			   									GxE_state = GxE_state,
-			   									sp_num = sp_num,
+												eQTL_state   = eQTL_state,
+												sp_num       = sp_num,
 												Posterior    = Posterior,
 												Lambda       = Lambda,
 												F            = F,
 												B_F          = B_F,
+												E_a2_F       = E_a2_F,
 												F_a          = F_a,
 												mu           = mu,
 												B_resid      = B_resid,
+												cis_effects  = cis_effects,
 												E_a2         = E_a2,
 												E_a          = E_a,
 												delta        = delta,
 												B_shape      = B_shape,
 												F_h2         = F_h2,
 												prec_B_F     = prec_B_F,
+												prec_E_a2_F  = prec_E_a2_F,
 												prec_F_resid = prec_F_resid,
 												resid_Y_prec = resid_Y_prec,
 												resid_h2     = resid_h2,
@@ -437,21 +478,24 @@ GxE_sampler = function(GxE_state,n_samples) {
 	#            figure(11)plot(X*current_state$B,X*run_parameters$B,'.')line(xlim,xli
 			} else {
 			   draw_results_diagnostics_new(
-			   									GxE_state = GxE_state,
-			   									sp_num = sp_num,
+												eQTL_state   = eQTL_state,
+												sp_num       = sp_num,
 												Posterior    = Posterior,
 												Lambda       = Lambda,
 												F            = F,
 												B_F          = B_F,
+												E_a2_F       = E_a2_F,
 												F_a          = F_a,
 												mu           = mu,
 												B_resid      = B_resid,
+												cis_effects  = cis_effects,
 												E_a2         = E_a2,
 												E_a          = E_a,
 												delta        = delta,
 												B_shape      = B_shape,
 												F_h2         = F_h2,
 												prec_B_F     = prec_B_F,
+												prec_E_a2_F  = prec_E_a2_F,
 												prec_F_resid = prec_F_resid,
 												resid_Y_prec = resid_Y_prec,
 												resid_h2     = resid_h2,
@@ -479,16 +523,19 @@ GxE_sampler = function(GxE_state,n_samples) {
 	current_state$Plam         = Plam
 	current_state$delta        = delta
 	current_state$tauh         = tauh
-	current_state$B_shape         = B_shape
+	current_state$B_shape      = B_shape
 	current_state$prec_B_F     = prec_B_F
+	current_state$prec_E_a2_F  = prec_E_a2_F
 	current_state$prec_F_resid = prec_F_resid
 	current_state$F_h2         = F_h2
 	current_state$Lambda       = Lambda
 	current_state$F            = F
 	current_state$mu           = mu
 	current_state$B_resid      = B_resid
+	current_state$cis_effects  = cis_effects
 	current_state$E_a2         = E_a2
 	current_state$B_F          = B_F
+	current_state$E_a2_F       = E_a2_F
 	current_state$F_a          = F_a
 	current_state$E_a          = E_a
 	current_state$nrun         = i
@@ -496,11 +543,11 @@ GxE_sampler = function(GxE_state,n_samples) {
 	save(current_state,file='current_state.RData')
 
 
-	GxE_state$current_state = current_state
-	GxE_state$Posterior = Posterior
-	GxE_state$RNG = list(
+	eQTL_state$current_state = current_state
+	eQTL_state$Posterior = Posterior
+	eQTL_state$RNG = list(
 		Random.seed = .Random.seed,
 		RNGkind = RNGkind()
 	)
-	return(GxE_state)
+	return(eQTL_state)
 }

@@ -19,7 +19,7 @@ simulate_data = function(
   p = nrow(Lambda)
   K = ncol(Lambda)
   
-  cis_effects = 0*rnorm(p)
+  cis_effects = rnorm(p)
 
   E_A1 = t(A1_chol) %*% matrix(rnorm(r*p),r,p) %*% diag(E_h2)
   F_A1 = t(A1_chol) %*% matrix(rnorm(r*k),r,k) %*% diag(F_vars[,2])
@@ -52,6 +52,7 @@ save_sim = function(
 	sigma2_Resid = rgamma(p,3,6)
 
 	cisGenotypes = sapply(1:p,function(x) sample(c(0,1),n,replace=T))
+	cisGenotypes[,1:5] = 0
 
 	data = simulate_data(Lambda,X,cisGenotypes,Z1,A1_chol,F_vars,E_h2,mu,B,B_F,sigma2_Resid)
 	sim_data = c(data,

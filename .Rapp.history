@@ -1,0 +1,419 @@
+b
+mean(log(y)-log(x))
+mean(log(y))-mean(log(x))
+lx = rnorm(nI*nS)
+ly = log(a) + b*lx
+x = exp(lx + rnorm(nI,0,s_x))#
+    y = exp(ly + rnorm(nI,0,s_y))
+mean(log(y)-log(x))
+log(a)
+ly = log(a) + b*lx
+x = exp(lx + rnorm(nI,0,s_x))#
+    y = exp(ly + rnorm(nI,0,s_y))
+mean(log(y)-log(x))
+ly = c(sapply(1:nS,function(i) log(a[i])+b[i]*lx[(i-1)*nI+(1:nI)]))
+x = exp(lx + rnorm(nI,0,s_x))#
+    y = exp(ly + rnorm(nI,0,s_y))
+mean(log(y)-log(x))
+a = runif(nS,0,5)#
+    b = rnorm(nS,0,2)#
+    s_x = runif(1,0,1)#
+    s_y = runif(1,0,1)#
+    lx = rnorm(nI*nS)#
+    # ly = log(a) + b*lx#
+    ly = c(sapply(1:nS,function(i) log(a[i])+b[i]*lx[(i-1)*nI+(1:nI)]))#
+    Sample = gl(nS,nI)#
+#
+    x = exp(lx + rnorm(nI,0,s_x))#
+    y = exp(ly + rnorm(nI,0,s_y))
+mean(log(y)-log(x))
+log(a)
+a = runif(nS,0,5)#
+    b = rnorm(nS,0,2)#
+    s_x = runif(1,0,1)#
+    s_y = runif(1,0,1)#
+    lx = rnorm(nI*nS)#
+    # ly = log(a) + b*lx#
+    ly = c(sapply(1:nS,function(i) log(a[i])+b[i]*lx[(i-1)*nI+(1:nI)]))#
+    Sample = gl(nS,nI)#
+#
+    x = exp(lx + rnorm(nI,0,s_x))#
+    y = exp(ly + rnorm(nI,0,s_y))
+log(a)
+mean(log(y)-log(x))
+nS = 2#
+nI = 100#
+a = 3#
+b = 2#
+s_x = .1#
+s_y = .2#
+res = c()
+a = runif(nS,0,5)#
+    b = rnorm(nS,0,2)#
+    s_x = runif(1,0,1)#
+    s_y = runif(1,0,1)#
+    lx = rnorm(nI*nS)#
+    # ly = log(a) + b*lx#
+    ly = c(sapply(1:nS,function(i) log(a[i])+b[i]*lx[(i-1)*nI+(1:nI)]))#
+    Sample = gl(nS,nI)#
+#
+    x = exp(lx + rnorm(nI,0,s_x))#
+    y = exp(ly + rnorm(nI,0,s_y))
+i = Sample==1
+mean(log(y[i])-log(x[i]))
+log(a)
+i = Sample==2
+mean(log(y[i])-log(x[i]))
+lm(log(y)~log(x):Sample)
+lm(log(y)~log(x):Sample-1)
+lm(log(y)~log(x)*Sample)
+d = data.frame(y = c(x,y),Sample = rep(Sample,2),Trait = gl(2,nI*nS),Ind = rep(1:(nI*nS),2))#
+    d$TS = paste(d$Trait,d$Sample)#
+    library(lme4)#
+#
+    # lme1 = lmer(log(y)~Trait+(1|Ind),d)#
+    lme1 = lme(log(y)~TS-1,random=~Trait:Sample-1|Ind,correlation = corSymm(value=.1,fixed=T),d)
+lme1
+?lme
+lme1 = lme(log(y)~TS-1,random=~Trait:Ind-1|Sample,correlation = corSymm(value=.1,fixed=T),d)
+lme1 = lme(log(y)~TS-1,random=~Trait:Ind-1|Sample,correlation = corSymm(value=c(.1,.1),fixed=T),d)
+lme1 = lme(log(y)~TS-1,random=~Trait:Ind-1|Sample,correlation = corSymm(value=diag(.1,.1),fixed=T),d)
+pdBlocked(list(diag(1:2), diag(c(0.1, 0.2, 0.3))),#
+                 nam = list(c("A","B"), c("a1", "a2", "a3")))
+pdBlocked(list(~ID),data)
+pdBlocked(form=list(~ID),data)
+pdBlocked(form=list(ID=~ID),data)
+pdBlocked(form=list(ID=~1),data)
+list(diag(1:2), diag(c(0.1, 0.2, 0.3)))
+pdBlocked(list(~ID,~Sample))
+pdBlocked(list(~ID,~Sample),d)
+pdBlocked(list(~ID,~Sample),data=d)
+list(~ID,~Sample)
+pd1 <- pdBlocked(list(c("A","B"), c("a1", "a2", "a3")))
+pd1
+names(pd1)
+str(pd1)
+lapply(1:nS,function(x) levels(d$Trait))
+pd2 = pdBlocked(lapply(1:nS,function(x) levels(d$Trait)))
+levels(d$TS)
+d$TS
+pd2 = pdBlocked(lapply(1:nS,function(x) paste(x,c(1,2))))
+pd2
+str(pd2)
+pdConstruct(pd2,value = list(c(2,1,1,2),c(3,2,2,3))
+)
+pdConstruct(pd1, list(diag(1:2), diag(c(0.1, 0.2, 0.3))))
+pdConstruct(pd2,value = list(matrix(c(2,1,1,2),2),matrix(c(3,2,2,3),2))
+)
+pdBlocked(lapply(1:nS,function(x) paste(x,c(1,2))))
+str(pdBlocked(lapply(1:nS,function(x) paste(x,c(1,2)))))
+pdBlocked(list(~Trait-1|ID),data=d)
+str(pdBlocked(list(~Trait-1|ID),data=d))
+str(pdBlocked(list(~Trait-1|ID)))
+str(pdBlocked(form=list(~Trait-1|ID),data=d))
+?pdBlocked
+str(pdBlocked(list(~Trait-1|ID)))
+str(pdBlocked(form=list(~Trait-1|ID),data=d))
+str(pdBlocked(list(~Trait-1|ID),data=d))
+as.matrix(pdBlocked(list(~Trait-1|ID),data=d))
+library(ggplot2)
+?stat_smooth
+a=read.delim('~/Box Sync/DER_projects/FLC_by_leaf/Data/RNAseq/Results/Results_separate.csv')
+head(a)
+a=read.csv('~/Box Sync/DER_projects/FLC_by_leaf/Data/RNAseq/Results/Results_separate.csv')
+head(a)
+plot(-log10(a$adj.P[1:100]))
+abline(v=7)
+head(a,n=10)
+i=1:1000
+plot(a[i,2],a[i,3])
+abline(0,1)
+plot(a[i,2],a[i,3],col=c(rep(2,7),rep(1,993)))
+i=1:100
+plot(a[i,2],a[i,3],col=c(rep(2,7),rep(1,length(i)-7)))
+i=grepl('VIN3',a$Gene)
+i
+i=grep('VIN3',a$Gene)
+i
+i=grep('VIN',a$Gene)
+i
+12-8
+tempdir()
+tempdir
+library(rstan)
+cite(rstan)
+cite('rstan')
+?rstan
+match(sample_id,paste0('Sample_',sample_info$RNAseqID)
+namesnamasdf
+sleuth_prep
+library(sleuth)
+sleuth_prep
+summary-methods
+summary.sleuth
+?sleuth
+? spread_abundance_by
+sleuth_fit
+library(rstan)
+?stan
+?rstan
+library(rstan)
+?stanfit-class
+x1 = rt(1000,1)
+x2 = rt(1000,1)
+x1 = abs(x1)
+x2 = abs(x2)
+hist(x1/(x1+x2))
+x1 = abs(rt(1000,1))
+x2 = abs(rt(1000,1))
+hist(x1/(x1+x2))
+x1 = abs(rt(1000,1));x2 = abs(rt(1000,1));hist(x1/(x1+x2))
+x1 = abs(2*rt(1000,1));x2 = abs(2*rt(1000,1));hist(x1/(x1+x2))
+x1 = abs(20*rt(1000,1));x2 = abs(20*rt(1000,1));hist(x1/(x1+x2))
+x = matrix(1:5,nc=1)
+y = matrix(1:3,nr=1)
+x
+y
+x %*% y
+dt(1,1)/dt(.1,1)
+dt(1,3)/dt(.1,3)
+?optimize
+setwd("/Users/der7/Documents/Statistics/univariate_mixed_model")
+setwd("/Users/der7/Documents/Git_repositories/BSFG_stan/Brassica_analysis")
+library("rstan")#
+rstan_options(auto_write = T)#
+options(mc.cores = 1)#
+#
+data = read.csv('rlog2_shade_brassica_shade.csv')
+head(data)
+dim(data)
+in_data = read.csv('rlog2_shade_brassica_shade.csv')
+data = data.frame(ID = colnames(in_data))
+data$Genotype = sapply(data$ID,function(x) paste(strsplit(x,'_')[[1]][1:2],sep='_'))
+data$Genotype = sapply(as.character(data$ID),function(x) paste(strsplit(x,'_')[[1]][1:2],sep='_'))
+sapply(as.character(data$ID),function(x) paste(strsplit(x,'_')[[1]][1:2],sep='_'))
+data$Genotype = sapply(as.character(data$ID),function(x) paste(strsplit(x,'_')[[1]][1:2],collapse='_'))
+sapply(as.character(data$ID),function(x) paste(strsplit(x,'_')[[1]][1:2],collapse='_'))
+data$TRT = sapply(as.character(data$ID),function(x) strsplit(x,'_')[[1]][3])
+sapply(as.character(data$ID),function(x) strsplit(x,'_')[[1]][3])
+head(data)
+data = data.frame(ID = colnames(in_data)[-c(1:2)])#
+data$Genotype = sapply(as.character(data$ID),function(x) paste(strsplit(x,'_')[[1]][1:2],collapse='_'))#
+data$TRT = sapply(as.character(data$ID),function(x) strsplit(x,'_')[[1]][3])
+head(data)
+data = data.frame(ID = colnames(in_data)[-c(1)])
+data$Genotype = sapply(as.character(data$ID),function(x) paste(strsplit(x,'_')[[1]][1:2],collapse='_'))
+data$TRT = sapply(as.character(data$ID),function(x) strsplit(x,'_')[[1]][3])
+head(in_data[,1:5])
+dim(t(in_data[,-1]))
+model.matrix(~TRT,data)[,-1]
+matrix((~TRT,data)[,-1],nc=1)
+matrix(model.matrix((~TRT,data)[,-1],nc=1)
+sim_data$X = matrix(model.matrix(~TRT,data)[,-1],nc=1)
+sim_data = list()#
+sim_data$Y = t(in_data[,-1])#
+sim_data$Z1 = model.matrix(~Genotype+0,data)#
+sim_data$X = matrix(model.matrix(~TRT,data)[,-1],nc=1)
+sim_data$X
+# set priors#
+sim_data$K = 10#
+sim_data$nu = 3#
+sim_data$nu_B = 1#
+sim_data$alpha_B = 2.1#
+sim_data$beta_B = 1/5#
+sim_data$alpha1 = 2.1#
+sim_data$beta1 = 1/5#
+sim_data$alpha2 = 2.1#
+sim_data$beta2 = 1#
+sim_data$sigma_scale = 2.5#
+sim_data$F_vars_beta = 2
+# now calculate Q matrix:#
+Z = sim_data$Z1#
+A = sim_data$A1#
+svd_ZAZ = svd(Z %*% A %*% t(Z))#
+sim_data$Q = svd_ZAZ$u#
+sim_data$d = svd_ZAZ$d#
+sim_data$d[sim_data$d< 1e-13] = 0
+sim_data$Z1
+Bra_data = list()#
+Bra_data$Y = t(in_data[,-1])#
+Bra_data$Z1 = model.matrix(~Genotype+0,data)#
+Bra_data$X = matrix(model.matrix(~TRT,data)[,-1],nc=1)#
+Bra_data$A1 = diag(1,ncol(Bra_data$Z1))#
+#
+# set priors#
+Bra_data$K = 10#
+Bra_data$nu = 3#
+Bra_data$nu_B = 1#
+Bra_data$alpha_B = 2.1#
+Bra_data$beta_B = 1/5#
+Bra_data$alpha1 = 2.1#
+Bra_data$beta1 = 1/5#
+Bra_data$alpha2 = 2.1#
+Bra_data$beta2 = 1#
+Bra_data$sigma_scale = 2.5#
+Bra_data$F_vars_beta = 2#
+#
+# now calculate Q matrix:#
+Z = Bra_data$Z1#
+A = Bra_data$A1#
+svd_ZAZ = svd(Z %*% A %*% t(Z))#
+Bra_data$Q = svd_ZAZ$u#
+Bra_data$d = svd_ZAZ$d#
+Bra_data$d[Bra_data$d< 1e-13] = 0#
+#
+# if no X, add fake X#
+if(is.null(Bra_data$X)){#
+    Bra_data$X = matrix(1,nr=Bra_data$n,nc = 1)#
+    Bra_data$b = 1#
+}#
+# if no Z2, add fake Z2#
+if(is.null(Bra_data$Z2)){#
+    Bra_data$Z2 = matrix(0,nr=Bra_data$n,nc = 0)#
+    Bra_data$r2 = 0#
+}#
+#
+Nitt = 100#
+warmup = 50#
+chains = 1
+Bra_data = list()#
+Bra_data$Y = t(in_data[,-1])#
+Bra_data$Z1 = model.matrix(~Genotype+0,data)#
+Bra_data$X = matrix(model.matrix(~TRT,data)[,-1],nc=1)#
+Bra_data$A1 = diag(1,ncol(Bra_data$Z1))#
+Bra_data$n = nrow(Bra_data$Y)#
+Bra_data$p = ncol(Bra_data$Y)#
+Bra_data$b = ncol(Bra_data$X)#
+#
+# set priors#
+Bra_data$K = 10#
+Bra_data$nu = 3#
+Bra_data$nu_B = 1#
+Bra_data$alpha_B = 2.1#
+Bra_data$beta_B = 1/5#
+Bra_data$alpha1 = 2.1#
+Bra_data$beta1 = 1/5#
+Bra_data$alpha2 = 2.1#
+Bra_data$beta2 = 1#
+Bra_data$sigma_scale = 2.5#
+Bra_data$F_vars_beta = 2#
+#
+# now calculate Q matrix:#
+Z = Bra_data$Z1#
+A = Bra_data$A1#
+svd_ZAZ = svd(Z %*% A %*% t(Z))#
+Bra_data$Q = svd_ZAZ$u#
+Bra_data$d = svd_ZAZ$d#
+Bra_data$d[Bra_data$d< 1e-13] = 0#
+#
+# if no X, add fake X#
+if(is.null(Bra_data$X)){#
+    Bra_data$X = matrix(1,nr=Bra_data$n,nc = 1)#
+    Bra_data$b = 1#
+}#
+# if no Z2, add fake Z2#
+if(is.null(Bra_data$Z2)){#
+    Bra_data$Z2 = matrix(0,nr=Bra_data$n,nc = 0)#
+    Bra_data$r2 = 0#
+}#
+#
+Nitt = 100#
+warmup = 50#
+chains = 1
+sprintf('Bra_data_fit_K_%d.RData',sim_data$K)
+# compare fitted values to true values#
+y_hat = get_posterior_mean(fit,pars='Y_hat')#
+plot(t(sim_data$Y),y_hat);abline(0,1)#
+# compare fitted Lambda to true Lambda#
+Lambda_est = matrix(get_posterior_mean(fit,pars='Lambda'),sim_data$p,sim_data$K,byrow=F)#
+Lambda_act = sim_data$Lambda#
+corL = cor(Lambda_est,Lambda_act)#
+#
+# re-order Lambda_act to correspond to Lambda_est#
+matched_cols = 1:4#apply(abs(corL),1,function(x) which(x==max(x)))#
+col_signs = sapply(1:length(matched_cols),function(i) sign(corL[i,matched_cols[i]]))#
+Lambda_act = sweep(Lambda_act[,matched_cols],2,col_signs,'*')#
+corL = corL[,matched_cols]#
+#
+image(corL^2,zlim=c(0,1))#
+corL
+Z = cbind(c(1,1,0,0),c(0,0,1,1))
+A = diag(1,2)
+s = svd(Z %*% A %*% t(Z))
+s
+s$u %*% diag(s$d)
+s$u %*% diag(s$d) %*% t(s$u)
+?sampling
+x1 = rexp(1e6,1/10)
+hist(x1)
+plot(density(x1))
+x2 = 1/10*rexp(1e6,1)
+lines(density(x2),col=2)
+x2 = 10*rexp(1e6,1)
+lines(density(x2),col=2)
+b_rows = c()
+max(b_rows)+1:5
+max(0,max(b_rows))
+max(b_rows,na.rm=T)
+?max
+max(c(0,b_rows)) +1:5
+X = matrix(1:9,3)
+X[b_rows,]
+X
+(1:3)/X
+setwd("/Users/der7/Documents/Git_repositories/Rcpp_GxE_SF_model")
+X = matrix(rnorm(100*100),100)
+X = X %*% t(X)
+cX = chol(X)
+z = matrix(rnorm(100*200),100)
+max(abs(t(cX)%*% cX - X))
+plot(X,cov(cX %*% z))
+dim(cX %*% z)
+plot(X,cov(t(cX %*% z)))
+abline(0,1)
+plot(X,cov(t(t(cX) %*% z)))
+abline(0,1)
+pnorm(1.3,0,1)
+t = runif(1e6,0,pnorm(1.3,0,1))
+hist(qnorm(t))
+t = runif(1e6,0,pgamma(1,5,3))
+mean(rgamma(1e6,5,3))
+hist(qgamma(t,5,3))
+t = runif(1e6,pgamma(1,5,3),Inf)
+t = runif(1e6,pgamma(1,5,3),1e6)
+hist(qgamma(t,5,3))
+t = runif(1e6,pgamma(1,5,3),1e3)
+hist(qgamma(t,5,3))
+t = runif(1e6,pgamma(1,5,3),1)
+hist(qgamma(t,5,3))
+pgamma(1,5,3)
+pgamma(100,5,3)
+A=5
+b=list(A=3)
+x = 1/rgamma(1e6,shape = 2,rate = 1/2)
+x = x[x<1]
+hist(x)
+hist(x[x<1])
+x = 1/rgamma(1e6,shape = 2,rate = 1/20)
+hist(x[x<1])
+x = 1/rgamma(1e6,shape = 2,rate = 1/1)
+hist(x[x<1])
+X
+dim(X)
+rowSums(X)
+rowsum(X)
+?rowsum
+X1 = diag(1,4)
+X2 = matrix(rnorm(2*4),2)
+X1
+X2
+X = rbind(X1,X2)
+X
+library(corpcor)
+Xi = pinv(X)
+??pinv
+library(pracma)
+??pinv
+Xi = pinv(X)
+Xi
+Xi %*% X

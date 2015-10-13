@@ -50,16 +50,18 @@ sample_delta = function( delta,tauh,Lambda_prec,delta_1_shape,delta_1_rate,delta
 }
 
 
-update_k = function( 
+update_k = function( 							
 					Lambda_prec   = Lambda_prec,
 					delta         = delta,
 					tauh          = tauh,
 					Plam          = Plam,
 					Lambda        = Lambda,
 					prec_B_F      = prec_B_F,
+					prec_E_a2_F   = prec_E_a2_F,
 					prec_F_resid  = prec_F_resid,
 					F_h2          = F_h2,
 					B_F           = B_F,
+					E_a2_F        = E_a2_F,
 					F_a           = F_a,
 					F             = F,
 					Z_1           = Z_1,
@@ -78,11 +80,12 @@ update_k = function(
 # controlled by b0 and b1. Should work correctly over continuations of
 # previously stopped chains.
 
-	n = nrow(F)
-	k = ncol(F)
-	b = nrow(B_F)
-	r = nrow(F_a)
-	p = nrow(Lambda)
+	n   = nrow(F)
+	k   = ncol(F)
+	bf  = nrow(B_F)
+	r2f = nrow(E_a2_F)
+	r   = nrow(F_a)
+	p   = nrow(Lambda)
 	gene_rows = 1:p
 
 	prob = 1/exp(b0 + b1*i)                # probability of adapting
@@ -94,18 +97,20 @@ update_k = function(
 
 	if(uu < prob && i>200){
 		if(i > 20 && num == 0 && all(lind < 0.995) && k < p/2) { #add a column
-			k           =k+1
-			Lambda_prec = cbind(Lambda_prec,rgamma(p,shape = Lambda_df/2, rate = Lambda_df/2))
-			delta[k]    = rgamma(1,shape = delta_2_shape,rate = delta_2_rate)
-			tauh        = cumprod(delta)
-			Plam        = sweep(Lambda_prec,2,tauh,'*')
-			Lambda      = cbind(Lambda,rnorm(p,0,sqrt(1/Plam[,k])))
-			prec_B_F[k] = runif(1,1,3)
+			k               =k+1
+			Lambda_prec     = cbind(Lambda_prec,rgamma(p,shape = Lambda_df/2, rate = Lambda_df/2))
+			delta[k]        = rgamma(1,shape = delta_2_shape,rate = delta_2_rate)
+			tauh            = cumprod(delta)
+			Plam            = sweep(Lambda_prec,2,tauh,'*')
+			Lambda          = cbind(Lambda,rnorm(p,0,sqrt(1/Plam[,k])))
+			prec_B_F[k]     = runif(1,1,3)
+			prec_E_a2_F[k]  = runif(1,1,3)
 			prec_F_resid[k] = runif(1,1,3)
-			F_h2[k]     = runif(1)
-			B_F         = cbind(B_F,rnorm(b,0,1/sqrt(prec_B_F[k])))
-			F_a         = cbind(F_a,rnorm(r,0,sqrt(F_h2[k]/prec_F_resid[k])))
-			F           = cbind(F,rnorm(n,Z_1 %*% F_a[,k],sqrt((1-F_h2[k])/prec_F_resid[k])))
+			F_h2[k]         = runif(1)
+			B_F             = cbind(B_F,rnorm(bf,0,1/sqrt(prec_B_F[k])))
+			E_a2_F          = cbind(E_a2_F,rnorm(r2f,0,1/sqrt(prec_B_F[k])))
+			F_a             = cbind(F_a,rnorm(r,0,sqrt(F_h2[k]/prec_F_resid[k])))
+			F               = cbind(F,rnorm(n,Z_1 %*% F_a[,k],sqrt((1-F_h2[k])/prec_F_resid[k])))
 		} else if(num > 0) { # drop redundant columns
 			nonred      = which(vec == 0) # non-redundant loadings columns
 			Lambda_prec = Lambda_prec[,nonred]
@@ -120,9 +125,11 @@ update_k = function(
 			Plam         = sweep(Lambda_prec,2,tauh,'*')
 			Lambda       = Lambda[,nonred]
 			prec_B_F     = prec_B_F[nonred]
+			prec_E_a2_F  = prec_E_a2_F[nonred]
 			prec_F_resid = prec_F_resid[nonred]
 			F_h2         = F_h2[nonred]
 			B_F          = B_F[,nonred]
+			E_a2_F       = E_a2_F[,nonred]
 			F_a          = F_a[,nonred]
 			F            = F[,nonred]
 		}
@@ -136,9 +143,11 @@ update_k = function(
 				Plam         = Plam,
 				Lambda       = Lambda,
 				prec_B_F     = prec_B_F,
+				prec_E_a2_F  = prec_E_a2_F,
 				prec_F_resid = prec_F_resid,
 				F_h2         = F_h2,
 				B_F          = B_F,
+				E_a2_F       = E_a2_F,
 				F_a          = F_a,
 				F            = F
 		))
@@ -151,16 +160,19 @@ save_posterior_samples = function(
 									Lambda       = Lambda,
 									F            = F,
 									B_F          = B_F,
+									E_a2_F       = E_a2_F,
 									F_a          = F_a,
 									mu           = mu,
 									B_resid      = B_resid,
+									cis_effects  = cis_effects,
 									E_a2         = E_a2,
 									E_a          = E_a,
 									delta        = delta,
 									B_shape      = B_shape,
 									F_h2         = F_h2,
-									prec_B_F         = prec_B_F,
-									prec_F_resid         = prec_F_resid,
+									prec_B_F     = prec_B_F,
+									prec_E_a2_F  = prec_E_a2_F,
+									prec_F_resid = prec_F_resid,
 									resid_Y_prec = resid_Y_prec,
 									resid_h2     = resid_h2,
 									E_a_prec     = E_a_prec,
@@ -179,32 +191,37 @@ save_posterior_samples = function(
 		Posterior$Lambda       = rbind(Posterior$Lambda, 	matrix(0,nr = length(Lambda)-nrow(Posterior$Lambda),nc = sp))
 		Posterior$F            = rbind(Posterior$F, 	   	matrix(0,nr = length(F)     -nrow(Posterior$F),		nc = sp))
 		Posterior$B_F          = rbind(Posterior$B_F,    	matrix(0,nr = length(B_F) 	-nrow(Posterior$B_F),	nc = sp))
-		Posterior$F_a          = rbind(Posterior$F_a, 	matrix(0,nr = length(F_a) 	-nrow(Posterior$F_a),	nc = sp))
+		Posterior$E_a2_F       = rbind(Posterior$E_a2_F,    matrix(0,nr = length(E_a2_F)-nrow(Posterior$E_a2_F),	nc = sp))
+		Posterior$F_a          = rbind(Posterior$F_a, 		matrix(0,nr = length(F_a) 	-nrow(Posterior$F_a),	nc = sp))
 		Posterior$delta        = rbind(Posterior$delta, 	matrix(0,nr = length(delta) -nrow(Posterior$delta),	nc = sp))
-		Posterior$F_h2         = rbind(Posterior$F_h2, 	matrix(0,nr = length(F_h2) 	-nrow(Posterior$F_h2),	nc = sp))
+		Posterior$F_h2         = rbind(Posterior$F_h2, 		matrix(0,nr = length(F_h2) 	-nrow(Posterior$F_h2),	nc = sp))
 		Posterior$prec_B_F     = rbind(Posterior$prec_B_F, 	matrix(0,nr = length(prec_B_F) 	-nrow(Posterior$prec_B_F),	nc = sp))
+		Posterior$prec_E_a2_F  = rbind(Posterior$prec_E_a2_F, 	matrix(0,nr = length(prec_E_a2_F) 	-nrow(Posterior$prec_E_a2_F),	nc = sp))
 		Posterior$prec_F_resid = rbind(Posterior$prec_F_resid, 	matrix(0,nr = length(prec_F_resid) 	-nrow(Posterior$prec_F_resid),	nc = sp))
 	}
 	Posterior$Lambda[1:length(Lambda),sp_num] = c(Lambda)
 	Posterior$F[1:length(F),sp_num]     = c(F)
 	Posterior$B_F[1:length(B_F),sp_num] = c(B_F)
+	Posterior$E_a2_F[1:length(E_a2_F),sp_num] = c(E_a2_F)
 	Posterior$F_a[1:length(F_a),sp_num] = c(F_a)
 	Posterior$delta[1:length(delta),sp_num] = delta
 	Posterior$F_h2[1:length(F_h2),sp_num] = F_h2
 	Posterior$prec_B_F[1:length(prec_B_F),sp_num] = prec_B_F
+	Posterior$prec_E_a2_F[1:length(prec_E_a2_F),sp_num] = prec_E_a2_F
 	Posterior$prec_F_resid[1:length(prec_F_resid),sp_num] = prec_F_resid
 
-	Posterior$mu[,sp_num] = mu
-	Posterior$B_shape[sp_num] = B_shape
-	Posterior$B_resid[,sp_num] = c(B_resid)
-	Posterior$resid_Y_prec[,sp_num] = resid_Y_prec
-	Posterior$resid_h2[,sp_num]     = resid_h2
+	Posterior$mu[,sp_num]             = mu
+	Posterior$B_shape[sp_num]         = B_shape
+	Posterior$B_resid[,sp_num]        = c(B_resid)
+	Posterior$cis_effects[,sp_num]    = c(cis_effects)
+	Posterior$resid_Y_prec[,sp_num]   = resid_Y_prec
+	Posterior$resid_h2[,sp_num]       = resid_h2
 	Posterior$E_a_prec[,sp_num]       = E_a_prec
-	try({Posterior$E_a2_prec[,sp_num]       = E_a2_prec},silent=T)
+	try({Posterior$E_a2_prec[,sp_num] = E_a2_prec},silent=T)
 
-	# save B,U,W
-	Posterior$E_a = (Posterior$E_a*(sp_num-1) + E_a)/sp_num
-	try({Posterior$E_a2   = (Posterior$E_a2*(sp_num-1) + E_a2)/sp_num},silent=T)
+	# update posterior means of random locations
+	Posterior$E_a       = (Posterior$E_a*(sp_num-1) + E_a)/sp_num
+	try({Posterior$E_a2 = (Posterior$E_a2*(sp_num-1) + E_a2)/sp_num},silent=T)
 
 	return(Posterior)
 }
@@ -221,28 +238,33 @@ clear_Posterior = function(GxE_state) {
 
     p = nrow(Posterior$resid_Y_prec)
     b = nrow(Posterior$B_resid)/p
+    bf = nrow(Posterior$B_F)/p
     n = nrow(Posterior$W)
     r = nrow(Posterior$E_a)
     r2 = nrow(Posterior$E_a2)
+    r2f = nrow(Posterior$E_a2_F)
     
     Posterior = list(
-            Lambda       = matrix(0,nr=0,nc=0),
-            F            = matrix(0,nr=0,nc=0),
-            B_F          = matrix(0,nr=0,nc=0),
-            F_a          = matrix(0,nr=0,nc=0),
-            mu           = matrix(0,nr=p,nc=0),
-            B_resid      = matrix(0,nr=b*p,nc=0),
-            delta        = matrix(0,nr=0,nc=0),
-            B_shape      = matrix(0,nr=1,nc=0),
-            F_h2         = matrix(0,nr=0,nc=0),
-            prec_B_F     = matrix(0,nr=0,nc=0),
-            prec_F_resid = matrix(0,nr=0,nc=0),
-            resid_Y_prec = matrix(0,nr=p,nc=0),
-            resid_h2     = matrix(0,nr=p,nc=0),
-            E_a_prec     = matrix(0,nr=p,nc=0),
-            E_a2_prec    = matrix(0,nr=p,nc=0),
-            E_a          = matrix(0,nr=r,nc=p),
-            E_a2         = matrix(0,nr=r2,nc=p)
+			Lambda       = matrix(0,nr=0,nc=0),
+			F            = matrix(0,nr=0,nc=0),
+			B_F          = matrix(0,nr=0,nc=0),
+			E_a2_F       = matrix(0,nr=0,nc=0),
+			F_a          = matrix(0,nr=0,nc=0),
+			mu           = matrix(0,nr=p,nc=0),
+			B_resid      = matrix(0,nr=b*p,nc=0),
+			cis_effects  = matrix(0,nr=p,nc=0),
+			delta        = matrix(0,nr=0,nc=0),
+			B_shape      = matrix(0,nr=1,nc=0),
+			F_h2         = matrix(0,nr=0,nc=0),
+			prec_B_F     = matrix(0,nr=0,nc=0),
+			prec_E_a2_F  = matrix(0,nr=0,nc=0),
+			prec_F_resid = matrix(0,nr=0,nc=0),
+			resid_Y_prec = matrix(0,nr=p,nc=0),
+			resid_h2     = matrix(0,nr=p,nc=0),
+			E_a_prec     = matrix(0,nr=p,nc=0),
+			E_a2_prec    = matrix(0,nr=p,nc=0),
+			E_a          = matrix(0,nr=r,nc=p),
+			E_a2         = matrix(0,nr=r2,nc=p)
     	)
 
     GxE_state$Posterior = Posterior
